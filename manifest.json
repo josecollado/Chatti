@@ -1,19 +1,20 @@
 {
-    "manifest_version": 3,
-    "name": "Chatti",
-    "version": "0.1",
-    "description": "Interact with tweets using ChatGPT",
-    "permissions": ["activeTab"],
-    "background": {
-      "service_worker": "./scripts/background.js"
-    },
-    "content_scripts": [{
-      "matches": ["https://twitter.com/*","https://x.com/*"],
-      "js": ["./scripts/contentScript.js"], 
-      "css": ["./css/style.css"]
-    }],
-    "action": {
-      "default_title": "Chatti Replies",
-      "default_popup": "popup.html"
-    }
+  "manifest_version": 3,
+  "name": "Chatti",
+  "version": "0.1",
+  "description": "Interact with tweets using ChatGPT",
+  "permissions": ["activeTab", "storage"],
+  "background": {
+    "service_worker": "./scripts/background.js"
+  },
+  "content_scripts": [{
+    "matches": ["https://twitter.com/*", "https://x.com/*"],
+    "js": ["./scripts/contentScript.js"], 
+    "css": ["./css/style.css"]
+  }],
+  "action": {
+    "default_title": "Chatti",
+    "default_popup": "popup.html"
   }
+
+}

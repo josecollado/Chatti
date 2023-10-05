@@ -6,5 +6,10 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     keywords = message.action
+        // Sending a response back
+        sendResponse({ status: 'success', data: 'Keywords received and processed' });
+
+        // Indicate that the response will be sent asynchronously
+        return true;
 });
 

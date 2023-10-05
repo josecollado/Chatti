@@ -9,8 +9,8 @@
   },
   "content_scripts": [{
     "matches": ["https://twitter.com/*", "https://x.com/*"],
-    "js": ["./scripts/contentScript.js"], 
-    "css": ["./css/style.css"]
+    "js": ["./jquery-3.6.0.min.js","./bootstrap.bundle.min.js","./scripts/contentScript.js"], 
+    "css": ["./bootstrap.min.css","./css/style.css"]
   }],
   "action": {
     "default_title": "Chatti",

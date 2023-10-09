@@ -3,18 +3,23 @@
   "name": "Chatti",
   "version": "0.1",
   "description": "Interact with tweets using ChatGPT",
-  "permissions": ["activeTab", "storage"],
+  "permissions": ["activeTab", "storage", "tabs"],
   "background": {
-    "service_worker": "./scripts/background.js"
-  },
-  "content_scripts": [{
-    "matches": ["https://twitter.com/*", "https://x.com/*"],
-    "js": ["./jquery-3.6.0.min.js","./bootstrap.bundle.min.js","./scripts/contentScript.js"], 
-    "css": ["./bootstrap.min.css","./css/style.css"]
-  }],
+    "service_worker": "scripts/background.js"
+},
+  "content_scripts": [
+    {
+      "matches": ["https://twitter.com/*", "https://x.com/*"],
+      "js": [
+        "./jquery-3.6.0.min.js",
+        "./bootstrap.bundle.min.js",
+        "./scripts/contentScript.js"
+      ],
+      "css": ["./bootstrap.min.css", "./css/style.css"]
+    }
+  ],
   "action": {
     "default_title": "Chatti",
     "default_popup": "popup.html"
   }
-
 }

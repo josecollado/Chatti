@@ -59,4 +59,6 @@ body {
  margin: 5% .5%;
  font-size: small;
 }
-
+.form-control{
+  margin: auto;
+}

@@ -71,7 +71,7 @@ const addToBox = (text) => {
   }else if(element4){
     element4.value = text;
     element4.dispatchEvent(event);
-  }
+  }else console.log('cannot find elements to add to')
 
 };
 
@@ -96,7 +96,7 @@ $(document).on('click', async (event) => {
           </div>
       `);
 
-    const response = await fetch('http://localhost:3000/ask', {
+    const response = await fetch('http://3.89.69.81/ask', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -111,7 +111,7 @@ $(document).on('click', async (event) => {
     $('.tone').prop('disabled', false);
 
     addToBox(responseData);
-    console.log(responseData);
+    console.log('response sent');
   } catch (error) {
     console.error('Fetch Error:', error);
   }
@@ -133,7 +133,7 @@ async function renderChattiPost() {
             </div>
         `);
 
-      const response = await fetch('http://localhost:3000/ask', {
+      const response = await fetch('http://18.191.26.143/ask', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

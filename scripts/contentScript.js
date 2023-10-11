@@ -1,6 +1,5 @@
 const OpenAI = require('openai');
 const dotenv = require('dotenv');
-const axios = require('axios');
 const errorSVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-exclamation-circle response-error " viewBox="0 0 16 16">
 <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
 <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
@@ -57,7 +56,7 @@ const tonePrompts = {
   'One Liner':
     'in a Short response, If you had to capture the essence of this tweet in just one catchy sentence, what would it be? no hashtags in the response',
   Quote:
-    'in a Short response, Which quote comes to mind that aligns with the theme of this tweet?',
+    'in a Short response, Which quote comes to mind that aligns with the theme of this tweet and who is this quote from?',
   Agree:
     'in a Short response, Given the essence of this tweet, how would you convey a similar sentiment, but in a way that feels uniquely yours? no hashtags in the response',
   Disagree:

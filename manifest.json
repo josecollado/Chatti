@@ -13,7 +13,7 @@
       "js": [
         "./jquery-3.6.0.min.js",
         "./bootstrap.bundle.min.js",
-        "./scripts/contentScript.js"
+        "./dist/contentScript.js"
       ],
       "css": ["./bootstrap.min.css", "./css/style.css"]
     }

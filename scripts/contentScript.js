@@ -1,3 +1,26 @@
+const OpenAI = require('openai');
+const dotenv = require('dotenv');
+const axios = require('axios');
+const errorSVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-exclamation-circle response-error " viewBox="0 0 16 16">
+<path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+<path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
+</svg>`
+
+dotenv.config();
+
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+if (!DISCORD_WEBHOOK_URL || !OPENAI_API_KEY) {
+  console.error('Essential environment variables are missing!');
+  process.exit(1);
+}
+
+const openai = new OpenAI({
+  apiKey: OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true
+});
+
 // Ensuring the document is fully loaded before executing any scripts
 
 $(document).ready(() => {
@@ -15,7 +38,7 @@ $(document).ready(() => {
 });
 
 function checkURL(tweetContent) {
-  if (ChattiRunStatus === 'disable') return;
+  if(ChattiRunStatus === 'disable') return;
   var validUrls = [
     'https://twitter.com/home',
     'https://twitter.com',
@@ -43,7 +66,7 @@ const tonePrompts = {
     'in a Short response, What probing question does this tweet inspire in you? no hashtags in the response',
   Cool: 'in a Short response, Refine the prompt by asking for a concise description of your cool image, focusing on your unique qualities or achievements. Use straightforward and specific language, avoiding unnecessary details like catchphrases or trend references.',
   Funny:
-    "in a Short response, imagine you're a stand-up comedian for a moment. How would you give a light-hearted twist to this tweet? no hashtags in the response",
+    "Write a humorous, light-hearted response that gives this tweet a clever comedic twist. Use wit and wordplay for amusement without hashtags.",
 };
 
 // Function to add text to the current active element
@@ -55,7 +78,9 @@ const addToBox = (text) => {
   let element3 = document.querySelector(
     '.notranslate.public-DraftEditor-content'
   );
-  let element4 = document.querySelector('[data-testid="tweetTextarea_0RichTextInputContainer"]');
+  let element4 = document.querySelector(
+    '[data-testid="tweetTextarea_0RichTextInputContainer"]'
+  );
 
   let event = new Event('change', { bubbles: true });
 
@@ -68,11 +93,10 @@ const addToBox = (text) => {
   } else if (element3) {
     element3.value = text;
     element3.dispatchEvent(event);
-  }else if(element4){
+  } else if (element4) {
     element4.value = text;
     element4.dispatchEvent(event);
-  }else console.log('cannot find elements to add to')
-
+  } else console.log('cannot find elements to add to');
 };
 
 $(document).on('click', async (event) => {
@@ -84,36 +108,27 @@ $(document).on('click', async (event) => {
   if (!event.target.id || !$('.btn-group').find(targetID).length) return;
   const tone = $(targetID).text();
 
-  const prompt = {
-    prompt: `${tonePrompts[tone]} here is the tweet: ${tweetContent}`,
-  };
+  const promptPlate = {
+    prompt: `In 1-2 sentences, ${tonePrompts[tone]}. Tweet: ${tweetContent}`,
+};
+  $('.tone').prop('disabled', true);
+  $(targetID).html(`
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    `);
 
-  try {
-    $('.tone').prop('disabled', true);
-    $(targetID).html(`
-          <div class="spinner-border text-light" role="status">
-              <span class="visually-hidden">Loading...</span>
-          </div>
-      `);
-
-    const response = await fetch('http://3.89.69.81/ask', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(prompt),
-    });
-
-    let responseData = await response.json();
-    responseData = responseData.replace(/(^[\s]+)|"/g, '');
-
+  const response = await roboAnswer(promptPlate);
+  if (response) {
     $(targetID).html(tone);
     $('.tone').prop('disabled', false);
-
-    addToBox(responseData);
-    console.log('response sent');
-  } catch (error) {
-    console.error('Fetch Error:', error);
+    addToBox(response);
+  } else {
+    $(targetID).html(errorSVG);
+    setTimeout(() => {
+      $(targetID).html(tone);
+    }, 1500);
+    $('.tone').prop('disabled', false);
   }
 });
 
@@ -125,34 +140,25 @@ async function renderChattiPost() {
 
   if (button.length && keywords.length > 0) {
     let buttonText = button.text();
-    try {
-      button.prop('disabled', true);
-      button.html(`
-            <div class="chatti-spinner spinner-border text-light " role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        `);
-
-      const response = await fetch('http://18.191.26.143/ask', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(keywordPrompt),
-      });
-
-      let responseData = await response.json();
-      responseData = responseData.replace(/(^[\s]+)|"/g, '');
-
+    button.prop('disabled', true);
+    button.html(`
+          <div class="chatti-spinner spinner-border text-light " role="status">
+              <span class="visually-hidden">Loading...</span>
+          </div>
+      `);
+    let response = await roboAnswer(keywordPrompt);
+    if (response) {
       button.html(buttonText);
       button.prop('disabled', false);
-
-      addToBox(responseData);
-      console.log(responseData);
-    } catch (error) {
-      console.error('Fetch Error:', error);
+      addToBox(response);
+    } else {
+      button.html(errorSVG);
+      setTimeout(() => {
+        button.html(buttonText);
+      }, 1500);
+      button.prop('disabled', false);
     }
-  } else if (keywords.length === 0) addToBox('Need to add more keywords');
+  } else if (keywords.length === 0) addToBox('Need to add keywords');
 }
 
 // Renders the tone buttons based on the tweet content
@@ -197,9 +203,6 @@ function buttonRender(tweetContent) {
       '<button type="button" id="chatti" class="chatti-button btn btn-outline-primary btn-sm">Use Chatti</button>'
     );
   }
-  // else {
-  //   setTimeout(buttonRender, 1000);
-  // }
 }
 
 // Extracts the quoted content from a string
@@ -226,9 +229,41 @@ function chattiStatus(status) {
     if ($('.chatti-button').length) $('.chatti-button').remove();
     else $('.tone-button-row').remove();
     ChattiRunStatus = status;
+    return true
   } else if (status === 'enable') {
     checkURL();
     ChattiRunStatus = status;
+    return false
+  }
+}
+
+async function roboAnswer({ prompt }) {
+  try {
+    const chatCompletion = await openai.chat.completions.create({
+      messages: [{ role: 'system', content: prompt }],
+      model: 'gpt-3.5-turbo',
+      max_tokens: 50,
+      temperature: 0.2
+    });
+
+    //this is here for testing purposes
+    // await fetch(DISCORD_WEBHOOK_URL, {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json'
+    //   },
+    //   body: JSON.stringify({
+    //     content: '<><><><>MESSAGE SENT @here<><><><>'
+    //   })
+    // });
+
+    return (responseContent = chatCompletion.choices[0].message.content.replace(
+      /(^[\s]+)|"/g,
+      ''
+    ));
+  } catch (error) {
+    console.log(`GPT ERROR: ${error}`);
+    return false;
   }
 }
 

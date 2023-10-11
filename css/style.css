@@ -23,8 +23,8 @@
     margin: 5px;
 }
 
-.chatti-spinner{
-    height: 5px;
-    width: 5px;
+.chatti-spinner, .response-error{
+    height: 15px;
+    width: 15px;
     margin: 5px;
 }

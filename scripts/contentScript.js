@@ -3,7 +3,7 @@ const dotenv = require('dotenv');
 const errorSVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-exclamation-circle response-error " viewBox="0 0 16 16">
 <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
 <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
-</svg>`
+</svg>`;
 
 dotenv.config();
 
@@ -17,7 +17,7 @@ if (!DISCORD_WEBHOOK_URL || !OPENAI_API_KEY) {
 
 const openai = new OpenAI({
   apiKey: OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true
+  dangerouslyAllowBrowser: true,
 });
 
 // Ensuring the document is fully loaded before executing any scripts
@@ -37,7 +37,7 @@ $(document).ready(() => {
 });
 
 function checkURL(tweetContent) {
-  if(ChattiRunStatus === 'disable') return;
+  if (ChattiRunStatus === 'disable') return;
   var validUrls = [
     'https://twitter.com/home',
     'https://twitter.com',
@@ -54,48 +54,66 @@ function checkURL(tweetContent) {
 // Mapping of tones to their respective prompts
 const tonePrompts = {
   'One Liner':
-    'in a Short response, If you had to capture the essence of this tweet in just one catchy sentence, what would it be? no hashtags in the response',
+    'Reply with a clever, original one-liner response that captures the essence of this tweet, without using emojis or hashtags.',
   Quote:
-    'in a Short response, Which quote comes to mind that aligns with the theme of this tweet and who is this quote from?',
+    'Reply with a fitting quote from someone famous that resonates with the themes of this tweet, mentioning the author, without emojis or hashtags.',
   Agree:
-    'in a Short response, Given the essence of this tweet, how would you convey a similar sentiment, but in a way that feels uniquely yours? no hashtags in the response',
+    'Reply sharing your own relatable perspective and experience based on this tweet, without emojis or hashtags.',
   Disagree:
-    'in a Short response, Share a concise counterpoint to this tweet while keeping the conversation positive and insightful. no hashtags in the response',
+    'Respectfully reply with a different point of view contrary to this tweet to further the discussion, without using emojis or hashtags.',
   Question:
-    'in a Short response, What probing question does this tweet inspire in you? no hashtags in the response',
-  Cool: 'in a Short response, Refine the prompt by asking for a concise description of your cool image, focusing on your unique qualities or achievements. Use straightforward and specific language, avoiding unnecessary details like catchphrases or trend references.',
+    'Reply with an open-ended question that prompts deeper thinking about this tweet and its themes, without emojis or hashtags.',
+  Cool: 'Reply with a concise description of what makes the image/content cool, focusing on unique qualities without unnecessary details or emojis/hashtags.',
   Funny:
-    "Write a humorous, light-hearted response that gives this tweet a clever comedic twist. Use wit and wordplay for amusement without hashtags.",
+    'Reply with a humorous, lighthearted response that gives the tweet a clever comedic twist using wit and wordplay, without emojis or hashtags.',
 };
 
-// Function to add text to the current active element
-const addToBox = (text) => {
-  let element1 = document.querySelector('[data-testid="tweetTextarea_0"]');
-  let element2 = document.querySelector(
-    '.public-DraftStyleDefault-block.public-DraftStyleDefault-ltr'
-  );
-  let element3 = document.querySelector(
-    '.notranslate.public-DraftEditor-content'
-  );
-  let element4 = document.querySelector(
-    '[data-testid="tweetTextarea_0RichTextInputContainer"]'
-  );
+const waitForElement = (selector, timeout = 5000, interval = 100) => {
+  return new Promise((resolve, reject) => {
+    const element = document.querySelector(selector);
+    if (element) {
+      resolve(element);
+      return;
+    }
+    let elapsed = 0;
+    const timer = setInterval(() => {
+      const element = document.querySelector(selector);
+      if (element) {
+        clearInterval(timer);
+        resolve(element);
+      }
+      elapsed += interval;
+      if (elapsed >= timeout) {
+        clearInterval(timer);
+        reject(new Error('Element not found within timeout'));
+      }
+    }, interval);
+  });
+};
 
-  let event = new Event('change', { bubbles: true });
+const addToBox = async (text) => {
+  try {
+    const selectors = [
+      '[data-testid="tweetTextarea_0"]',
+      '.public-DraftStyleDefault-block.public-DraftStyleDefault-ltr',
+      '.notranslate.public-DraftEditor-content',
+      '[data-testid="tweetTextarea_0RichTextInputContainer"]',
+      '.DraftEditor-root',
+      '[data-offset-key="6dhdr"]',
+    ];
 
-  if (element1) {
-    element1.value = text;
-    element1.dispatchEvent(event);
-  } else if (element2) {
-    element2.value = text;
-    element2.dispatchEvent(event);
-  } else if (element3) {
-    element3.value = text;
-    element3.dispatchEvent(event);
-  } else if (element4) {
-    element4.value = text;
-    element4.dispatchEvent(event);
-  } else console.log('cannot find elements to add to');
+    for (const selector of selectors) {
+      const element = await waitForElement(selector);
+      if (element) {
+        element.value = text;
+        const event = new Event('change', { bubbles: true });
+        element.dispatchEvent(event);
+        return; // Exit once we've found and updated an element
+      }
+    }
+  } catch (error) {
+    console.log('Error:', error.message);
+  }
 };
 
 $(document).on('click', async (event) => {
@@ -108,8 +126,10 @@ $(document).on('click', async (event) => {
   const tone = $(targetID).text();
 
   const promptPlate = {
-    prompt: `In 1-2 sentences, ${tonePrompts[tone]}. Tweet: ${tweetContent}`,
-};
+    prompt: `Tweet: ${tweetContent}
+    
+    Response: In 1 concise sentence, ${tonePrompts[tone]}`
+    };
   $('.tone').prop('disabled', true);
   $(targetID).html(`
         <div class="spinner-border text-light" role="status">
@@ -228,11 +248,11 @@ function chattiStatus(status) {
     if ($('.chatti-button').length) $('.chatti-button').remove();
     else $('.tone-button-row').remove();
     ChattiRunStatus = status;
-    return true
+    return true;
   } else if (status === 'enable') {
     checkURL();
     ChattiRunStatus = status;
-    return false
+    return false;
   }
 }
 
@@ -242,10 +262,10 @@ async function roboAnswer({ prompt }) {
       messages: [{ role: 'system', content: prompt }],
       model: 'gpt-3.5-turbo',
       max_tokens: 50,
-      temperature: 0.2
+      temperature: 0.2,
     });
 
-    //this is here for testing purposes
+    // this is here for testing purposes
     // await fetch(DISCORD_WEBHOOK_URL, {
     //   method: 'POST',
     //   headers: {
@@ -256,10 +276,9 @@ async function roboAnswer({ prompt }) {
     //   })
     // });
 
-    return (responseContent = chatCompletion.choices[0].message.content.replace(
-      /(^[\s]+)|"/g,
-      ''
-    ));
+    console.log(chatCompletion);
+
+    return chatCompletion.choices[0].message.content.replace(/(^[\s]+)|"/g, '');
   } catch (error) {
     console.log(`GPT ERROR: ${error}`);
     return false;

@@ -1,43 +1,50 @@
+// Import required packages and modules
 const OpenAI = require('openai');
 const dotenv = require('dotenv');
+
+// Load environment variables
+dotenv.config();
+
+// SVG for error display
 const errorSVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-exclamation-circle response-error " viewBox="0 0 16 16">
 <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
 <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
 </svg>`;
 
-dotenv.config();
-
+// Environment variables for Discord and OpenAI
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
+// Validate that the environment variables exist
 if (!DISCORD_WEBHOOK_URL || !OPENAI_API_KEY) {
   console.error('Essential environment variables are missing!');
   process.exit(1);
 }
 
+// Initialize OpenAI API
 const openai = new OpenAI({
   apiKey: OPENAI_API_KEY,
   dangerouslyAllowBrowser: true,
 });
 
-// Ensuring the document is fully loaded before executing any scripts
-
+// Wait for the document to be fully loaded
 $(document).ready(() => {
-  // Initial check
+  // Initial URL check
   checkURL();
 
-  // Listen for URL changes
-  $(window).on('popstate', function () {
+  // Listen for changes in the URL
+  $(window).on('popstate', () => {
     checkURL();
   });
 
+  // Log that the script is running
   console.log('Chatti Running in Background');
-
-  // Overriding the addEventListener method first
 });
 
+// Function to check the current URL
 function checkURL(tweetContent) {
   if (ChattiRunStatus === 'disable') return;
+  // URLs where the script should activate
   var validUrls = [
     'https://twitter.com/home',
     'https://twitter.com',
@@ -45,13 +52,19 @@ function checkURL(tweetContent) {
     'https://x.com',
     'https://twitter.com/',
   ];
-  var url = window.location.href;
+
+  // Current URL
+  const url = window.location.href;
+
+  // Decide which UI to render based on the URL
   if (validUrls.includes(url)) {
     buttonRender();
-  } else renderTones(tweetContent);
+  } else {
+    renderTones(tweetContent);
+  }
 }
 
-// Mapping of tones to their respective prompts
+// Mapping between tone types and prompts for OpenAI
 const tonePrompts = {
   'One Liner':
     'Reply with a clever, original one-liner response that captures the essence of this tweet, without using emojis or hashtags.',
@@ -68,13 +81,9 @@ const tonePrompts = {
     'Reply with a humorous, lighthearted response that gives the tweet a clever comedic twist using wit and wordplay, without emojis or hashtags.',
 };
 
+// Function to wait for an element to appear in the DOM
 const waitForElement = (selector, timeout = 5000, interval = 100) => {
   return new Promise((resolve, reject) => {
-    const element = document.querySelector(selector);
-    if (element) {
-      resolve(element);
-      return;
-    }
     let elapsed = 0;
     const timer = setInterval(() => {
       const element = document.querySelector(selector);
@@ -85,102 +94,71 @@ const waitForElement = (selector, timeout = 5000, interval = 100) => {
       elapsed += interval;
       if (elapsed >= timeout) {
         clearInterval(timer);
-        reject(new Error('Element not found within timeout'));
+        reject(new Error(`Element not found: ${selector}`));
       }
     }, interval);
   });
 };
 
 const addToBox = async (text) => {
-  try {
-    const selectors = [
-      '[data-testid="tweetTextarea_0"]',
-      '.public-DraftStyleDefault-block.public-DraftStyleDefault-ltr',
-      '.notranslate.public-DraftEditor-content',
-      '[data-testid="tweetTextarea_0RichTextInputContainer"]',
-      '.DraftEditor-root',
-      '[data-offset-key="6dhdr"]',
-    ];
+  // Array of selectors to identify the tweet box in various situations
+  const selectors = [
+    '.public-DraftStyleDefault-block.public-DraftStyleDefault-ltr',
+    '[data-testid="tweetTextarea_0"]',
+    '.notranslate.public-DraftEditor-content',
+    '.DraftEditor-root',
+    '[data-testid="tweetTextarea_0RichTextInputContainer"]',
+    '[data-offset-key="6dhdr"]',
+  ];
 
-    for (const selector of selectors) {
+  // Try to find the parent div by its class
+  const parentDiv = document.querySelector(
+    '.public-DraftStyleDefault-block.public-DraftStyleDefault-ltr'
+  );
+
+  // If the parent div exists, find its child span
+  const span = parentDiv ? parentDiv.querySelector('span') : null;
+
+  // If the span exists, add the text to it
+  if (span) {
+    span.textContent = text;
+
+    // Dispatch an 'input' event to notify of the text change
+    const inputEvent = new Event('input', { bubbles: true });
+    span.dispatchEvent(inputEvent);
+
+    // Exit the function early since we've found the target
+    return true;
+  }
+
+  // If we couldn't find the span, try other selectors
+  for (const selector of selectors) {
+    try {
       const element = await waitForElement(selector);
+
+      // If the element exists, add the text to it
       if (element) {
         element.value = text;
-        const event = new Event('change', { bubbles: true });
-        element.dispatchEvent(event);
-        return; // Exit once we've found and updated an element
+
+        // Dispatch a 'change' event to notify of the text change
+        const changeEvent = new Event('change', { bubbles: true });
+        element.dispatchEvent(changeEvent);
+
+        // Return true to indicate success
+        return true;
       }
+    } catch (error) {
+      console.error(
+        `Failed to find element for selector ${selector}: ${error.message}`
+      );
+
+      // Return false to indicate failure
+      return false;
     }
-  } catch (error) {
-    console.log('Error:', error.message);
   }
 };
 
-$(document).on('click', async (event) => {
-  if (ChattiRunStatus != 'enable') return;
-  const tweetContent = extractQuotedContent(event.currentTarget.title);
-  const targetID = '#' + event.target.id;
-  checkURL(tweetContent);
-  if (targetID === '#chatti') return renderChattiPost();
-  if (!event.target.id || !$('.btn-group').find(targetID).length) return;
-  const tone = $(targetID).text();
-
-  const promptPlate = {
-    prompt: `Tweet: ${tweetContent}
-    
-    Response: In 1 concise sentence, ${tonePrompts[tone]}`
-    };
-  $('.tone').prop('disabled', true);
-  $(targetID).html(`
-        <div class="spinner-border text-light" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-    `);
-
-  const response = await roboAnswer(promptPlate);
-  if (response) {
-    $(targetID).html(tone);
-    $('.tone').prop('disabled', false);
-    addToBox(response);
-  } else {
-    $(targetID).html(errorSVG);
-    setTimeout(() => {
-      $(targetID).html(tone);
-    }, 1500);
-    $('.tone').prop('disabled', false);
-  }
-});
-
-async function renderChattiPost() {
-  let keywordPrompt = {
-    prompt: `Craft a compelling tweet using one or more of the given keywords: ${keywords}. Your response should be short and clear, avoiding hashtags, emojis, or excessive abbreviations. Use precise language and tone to make a lasting impact. Balance brevity with enthusiasm, ensuring your message is memorable and relevant.`,
-  };
-  let button = $('.chatti-button');
-
-  if (button.length && keywords.length > 0) {
-    let buttonText = button.text();
-    button.prop('disabled', true);
-    button.html(`
-          <div class="chatti-spinner spinner-border text-light " role="status">
-              <span class="visually-hidden">Loading...</span>
-          </div>
-      `);
-    let response = await roboAnswer(keywordPrompt);
-    if (response) {
-      button.html(buttonText);
-      button.prop('disabled', false);
-      addToBox(response);
-    } else {
-      button.html(errorSVG);
-      setTimeout(() => {
-        button.html(buttonText);
-      }, 1500);
-      button.prop('disabled', false);
-    }
-  } else if (keywords.length === 0) addToBox('Need to add keywords');
-}
-
-// Renders the tone buttons based on the tweet content
+// Function to render tone buttons based on tweet content
 function renderTones(tweetContent) {
   if (!tweetContent || $('.tone-button-row').length) return;
 
@@ -190,16 +168,16 @@ function renderTones(tweetContent) {
   $('.chatti-button').remove();
 
   rowDiv.after(`
-      <div class="btn-group tone-button-row" role="group" aria-label="Basic outlined example">
-          <button type="button" class="tone btn btn-outline-primary" id='btn1'>One Liner</button>
-          <button type="button" class="tone btn btn-outline-primary" id='btn2'>Quote</button>
-          <button type="button" class="tone btn btn-outline-primary" id='btn3'>Agree</button>
-          <button type="button" class="tone btn btn-outline-primary" id='btn4'>Disagree</button>
-          <button type="button" class="tone btn btn-outline-primary" id='btn5'>Question</button>
-          <button type="button" class="tone btn btn-outline-primary" id='btn6'>Cool</button>
-          <button type="button" class="tone btn btn-outline-primary" id='btn7'>Funny</button>
-      </div>
-  `);
+    <div class="btn-group tone-button-row" role="group" aria-label="Basic outlined example">
+    <button type="button" class="tone btn btn-outline-primary" id='btn1'>One Liner</button>
+    <button type="button" class="tone btn btn-outline-primary" id='btn2'>Quote</button>
+    <button type="button" class="tone btn btn-outline-primary" id='btn3'>Agree</button>
+    <button type="button" class="tone btn btn-outline-primary" id='btn4'>Disagree</button>
+    <button type="button" class="tone btn btn-outline-primary" id='btn5'>Question</button>
+    <button type="button" class="tone btn btn-outline-primary" id='btn6'>Cool</button>
+    <button type="button" class="tone btn btn-outline-primary" id='btn7'>Funny</button>
+    </div>
+    `);
 }
 
 // Function to render the Chatti button
@@ -224,7 +202,7 @@ function buttonRender(tweetContent) {
   }
 }
 
-// Extracts the quoted content from a string
+// Function to extract quoted content from a string
 function extractQuotedContent(str) {
   const startIndex = str.indexOf('"');
   const endIndex = str.lastIndexOf('"');
@@ -240,9 +218,10 @@ let ChattiRunStatus = '',
   keywords = '';
 chrome.storage.sync.get(['currentStatus', 'keywords'], function (result) {
   ChattiRunStatus = result.currentStatus;
-  keywords = result.keywords;
+  keywords = result.keywords ?? '';
 });
 
+// Function to handle changes in Chatti status
 function chattiStatus(status) {
   if (status === 'disable') {
     if ($('.chatti-button').length) $('.chatti-button').remove();
@@ -256,6 +235,7 @@ function chattiStatus(status) {
   }
 }
 
+// Function to interact with OpenAI and get a response
 async function roboAnswer({ prompt }) {
   try {
     const chatCompletion = await openai.chat.completions.create({
@@ -265,19 +245,6 @@ async function roboAnswer({ prompt }) {
       temperature: 0.2,
     });
 
-    // this is here for testing purposes
-    // await fetch(DISCORD_WEBHOOK_URL, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json'
-    //   },
-    //   body: JSON.stringify({
-    //     content: '<><><><>MESSAGE SENT @here<><><><>'
-    //   })
-    // });
-
-    console.log(chatCompletion);
-
     return chatCompletion.choices[0].message.content.replace(/(^[\s]+)|"/g, '');
   } catch (error) {
     console.log(`GPT ERROR: ${error}`);
@@ -285,6 +252,7 @@ async function roboAnswer({ prompt }) {
   }
 }
 
+// Listener for messages from the Chrome extension
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   let message = request.message;
   if (message === 'disable') {
@@ -296,3 +264,87 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   // Send a response back
   sendResponse({ reply: 'Message received in content script' });
 });
+
+// Main click event handler
+$(document).on('click', async (event) => {
+  if (ChattiRunStatus != 'enable') return;
+  const tweetContent = extractQuotedContent(event.currentTarget.title);
+  const targetID = '#' + event.target.id;
+  checkURL(tweetContent);
+
+  if (targetID === '#chatti') {
+    let button = document.getElementById('chatti');
+    let text = button.textContent;
+    chrome.storage.sync.get(['keywords'], function (result) {
+      keywords = result.keywords ?? keywords;
+    });
+
+    // Disable the button and change its HTML
+    button.disabled = true;
+    button.innerHTML = `
+            <div class="chatti-spinner spinner-border text-light" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          `;
+
+    console.log('RenderChattiPost called');
+    let keywordPrompt = {
+      prompt: `Craft a compelling tweet using one or more of the given keywords: ${keywords}. Your response should be short and clear, avoiding hashtags, emojis, or excessive abbreviations. Use precise language and tone to make a lasting impact. Balance brevity with enthusiasm, ensuring your message is memorable and relevant.`,
+    };
+
+    // Simulate async call
+    setTimeout(async () => {
+      if (keywords.length !== 0) {
+        let response = await roboAnswer(keywordPrompt);
+        console.log('roboAnswer response:', response);
+        const boxResult = addToBox(response);
+        if (response && boxResult) {
+          button.innerHTML = text;
+          button.disabled = false;
+          console.log('Successful roboAnswer. Reverting button.');
+        } else {
+          button.innerHTML = errorSVG;
+          setTimeout(() => {
+            button.innerHTML = text;
+            console.log('Error in roboAnswer. Reverting button.');
+          }, 1500);
+          button.disabled = false;
+        }
+      } else {
+        button.innerHTML = text;
+        button.disabled = false;
+        console.log('No keywords. Exiting.');
+        addToBox('Need to add keywords');
+      }
+    }, 3000);
+  }
+
+  if (!event.target.id || !$('.btn-group').find(targetID).length) return;
+  const tone = $(targetID).text();
+
+  const promptPlate = {
+    prompt: `Tweet: ${tweetContent}
+          
+          Response: In 1 concise sentence, ${tonePrompts[tone]}`,
+  };
+  $('.tone').prop('disabled', true);
+  $(targetID).html(`
+              <div class="spinner-border text-light" role="status">
+                  <span class="visually-hidden">Loading...</span>
+              </div>
+          `);
+
+  const response = await roboAnswer(promptPlate);
+  const boxResponse = await addToBox(response);
+  if (boxResponse) {
+    $(targetID).html(tone);
+    $('.tone').prop('disabled', false);
+  } else {
+    $(targetID).html(errorSVG);
+    setTimeout(() => {
+      $(targetID).html(tone);
+    }, 1500);
+    $('.tone').prop('disabled', false);
+  }
+});
+

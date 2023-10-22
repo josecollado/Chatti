@@ -4,9 +4,10 @@
   "version": "0.1",
   "description": "Interact with tweets using ChatGPT",
   "permissions": ["activeTab", "storage", "tabs"],
+  "icons": { "128": "./images/chatti-logo.png" },
   "background": {
     "service_worker": "scripts/background.js"
-},
+  },
   "content_scripts": [
     {
       "matches": ["https://twitter.com/*", "https://x.com/*"],

@@ -21,15 +21,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 function sendMessage(message) {
   // // Some logic or event triggers the message sending
-  // chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-  //     var activeTab = tabs[0];
-  //     chrome.tabs.sendMessage(activeTab.id, {"message": message}, function(response) {
-  //         if(response && response.reply){
-  //             console.log(response.reply)
-  //         }
-  //     });
-  // });
-
   // URLs to match
   const urlsToMatch = ['*://twitter.com/*', '*://x.com/*'];
 

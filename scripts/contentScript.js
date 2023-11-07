@@ -65,21 +65,39 @@ function checkURL(tweetContent) {
 }
 
 // Mapping between tone types and prompts for OpenAI
+// const tonePrompts = {
+//   'One Liner':
+//     'Reply with a clever, original one-liner response that captures the essence of this tweet, without using emojis or hashtags.',
+//   Quote:
+//     'Reply with a fitting quote from someone famous that resonates with the themes of this tweet, mentioning the author, without emojis or hashtags.',
+//   Agree:
+//     'Reply sharing your own relatable perspective and experience based on this tweet, without emojis or hashtags.',
+//   Disagree:
+//     'Respectfully reply with a different point of view contrary to this tweet to further the discussion, without using emojis or hashtags.',
+//   Question:
+//     'Reply with an open-ended question that prompts deeper thinking about this tweet and its themes, without emojis or hashtags.',
+//   Cool: 'Reply with a concise description of what makes the image/content cool, focusing on unique qualities without unnecessary details or emojis/hashtags.',
+//   Funny:
+//     'Reply with a humorous, lighthearted response that gives the tweet a clever comedic twist using wit and wordplay, without emojis or hashtags.',
+// };
+
 const tonePrompts = {
   'One Liner':
-    'Reply with a clever, original one-liner response that captures the essence of this tweet, without using emojis or hashtags.',
+    'Craft a sharp, witty one-liner that epitomizes this tweet. Skip emojis and hashtags.',
   Quote:
-    'Reply with a fitting quote from someone famous that resonates with the themes of this tweet, mentioning the author, without emojis or hashtags.',
+    `Respond with a relevant quote from a notable figure that echoes the tweet's themes. Attribute the author. No emojis or hashtags.`,
   Agree:
-    'Reply sharing your own relatable perspective and experience based on this tweet, without emojis or hashtags.',
+    'Express agreement with a personal insight or experience that aligns with this tweet. Avoid emojis and hashtags.',
   Disagree:
-    'Respectfully reply with a different point of view contrary to this tweet to further the discussion, without using emojis or hashtags.',
+    'Offer a polite counter-argument to this tweet, enriching the conversation. Refrain from using emojis or hashtags.',
   Question:
-    'Reply with an open-ended question that prompts deeper thinking about this tweet and its themes, without emojis or hashtags.',
-  Cool: 'Reply with a concise description of what makes the image/content cool, focusing on unique qualities without unnecessary details or emojis/hashtags.',
+    `Pose a thought-provoking question related to this tweet's deeper implications. Exclude emojis and hashtags.`,
+  Cool: 
+    `Define what makes this content stand out, in brief, without delving into extraneous details. Omit emojis and hashtags.` ,
   Funny:
-    'Reply with a humorous, lighthearted response that gives the tweet a clever comedic twist using wit and wordplay, without emojis or hashtags.',
+    'Deliver a witty retort that adds a comedic angle to this tweet, using humor and cleverness. No emojis or hashtags.'
 };
+
 
 // Function to wait for an element to appear in the DOM
 const waitForElement = (selector, timeout = 5000, interval = 100) => {
@@ -162,9 +180,11 @@ const addToBox = async (text) => {
 function renderTones(tweetContent) {
   if (!tweetContent || $('.tone-button-row').length) return;
 
-  const rowDiv = $(
-    '.css-1dbjc4n.r-1awozwy.r-kemksi.r-18u37iz.r-1w6e6rj.r-1wtj0ep.r-id7aif.r-184en5c'
-  );
+  // const rowDiv = $(
+  //   '.css-1dbjc4n.r-1awozwy.r-kemksi.r-18u37iz.r-1w6e6rj.r-1wtj0ep.r-id7aif.r-184en5c'
+  // );
+  var rowDiv = $('.css-1dbjc4n.r-kemksi.r-jumn1c.r-xd6kpl.r-gtdqiz.r-ipm5af.r-184en5c');
+
   $('.chatti-button').remove();
 
   rowDiv.after(`
@@ -182,6 +202,7 @@ function renderTones(tweetContent) {
 
 // Function to render the Chatti button
 function buttonRender(tweetContent) {
+
   if (ChattiRunStatus === 'disable') return;
   if (tweetContent) {
     $('.chatti-button').remove();
@@ -190,9 +211,7 @@ function buttonRender(tweetContent) {
 
   if ($('.tone-button-row').length) $('.tone-button-row').remove();
 
-  const rowDiv = $(
-    '.css-1dbjc4n.r-1awozwy.r-kemksi.r-18u37iz.r-1w6e6rj.r-1wtj0ep.r-id7aif.r-184en5c'
-  );
+  const rowDiv = $('[data-testid="toolBar"]');
   const appDiv = $('.chatti-button');
 
   if (rowDiv.length && !appDiv.length) {
@@ -240,7 +259,7 @@ async function roboAnswer({ prompt }) {
   try {
     const chatCompletion = await openai.chat.completions.create({
       messages: [{ role: 'system', content: prompt }],
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4-1106-preview',
       max_tokens: 50,
       temperature: 0.2,
     });
@@ -287,33 +306,31 @@ $(document).on('click', async (event) => {
             </div>
           `;
 
-    console.log('RenderChattiPost called');
     let keywordPrompt = {
-      prompt: `Craft a compelling tweet using one or more of the given keywords: ${keywords}. Your response should be short and clear, avoiding hashtags, emojis, or excessive abbreviations. Use precise language and tone to make a lasting impact. Balance brevity with enthusiasm, ensuring your message is memorable and relevant.`,
+      prompt: `Write a tweet, at random use only one of these keywords that is in an array:[${keywords}]. Be clear, brief, short, concise and impactful. No hashtags, emojis, or abbreviations. Make every word count for a memorable message.`
     };
+    
+    
+    
 
     // Simulate async call
     setTimeout(async () => {
       if (keywords.length !== 0) {
-        let response = await roboAnswer(keywordPrompt);
-        console.log('roboAnswer response:', response);
+        let response = await roboAnswer(keywordPrompt)
         const boxResult = addToBox(response);
         if (response && boxResult) {
           button.innerHTML = text;
           button.disabled = false;
-          console.log('Successful roboAnswer. Reverting button.');
         } else {
           button.innerHTML = errorSVG;
           setTimeout(() => {
             button.innerHTML = text;
-            console.log('Error in roboAnswer. Reverting button.');
           }, 1500);
           button.disabled = false;
         }
       } else {
         button.innerHTML = text;
         button.disabled = false;
-        console.log('No keywords. Exiting.');
         addToBox('Need to add keywords');
       }
     }, 3000);
@@ -325,7 +342,7 @@ $(document).on('click', async (event) => {
   const promptPlate = {
     prompt: `Tweet: ${tweetContent}
           
-          Response: In 1 concise sentence, ${tonePrompts[tone]}`,
+          Response: In 1 concise sentence and Make every word count for a memorable response, ${tonePrompts[tone]}`,
   };
   $('.tone').prop('disabled', true);
   $(targetID).html(`
